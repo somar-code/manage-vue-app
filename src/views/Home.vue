@@ -205,7 +205,7 @@ onMounted(()=>{
                </el-card>
             </div>
             <el-card class="top-echart">
-               <div ref="echart" style="height: 200px"></div>
+               <div ref="echart" style="height: 240px"></div>
             </el-card>
 
             <div class="graph">
@@ -300,7 +300,7 @@ onMounted(()=>{
       justify-content:space-between;
       .el-card{
          width:48%;
-         height:220px;
+         height:270px;
       }
    }
   }

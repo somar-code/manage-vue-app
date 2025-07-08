@@ -52,25 +52,36 @@
     <!-- 商品详情区域 -->
     <el-col :span="8">
       <el-card class="product-detail">
-        <div class="detail-header">商品详情</div>
-        <div v-if="selectedProduct" class="detail-content">
-          <img :src="selectedProduct.image" class="detail-img" />
-          <div class="detail-info-right">
-            <div class="detail-name">{{ selectedProduct.name }}</div>
-            <div class="detail-desc">{{ selectedProduct.desc }}</div>
-            <div class="detail-info-row">
-              <span>价格：</span><b>￥{{ selectedProduct.price }}</b>
-            </div>
-            <div class="detail-info-row">
-              <span>库存：</span><b>{{ selectedProduct.stock }}</b>
-            </div>
-            <div class="detail-info-row">
-              <span>销量：</span><b>{{ selectedProduct.sales }}</b>
-            </div>
-            <el-button type="primary" @click="openEditDialog(selectedProduct)">编辑商品</el-button>
-          </div>
+        <div class="detail-header">
+          商品详情
+          <span class="detail-tip">（点击表格行选择商品）</span>
         </div>
-        <div v-else class="empty-detail">请选择左侧商品查看详情</div>
+        <div class="detail-list-container">
+          <div v-if="selectedProducts.length > 0" class="detail-list">
+            <div 
+              v-for="product in selectedProducts" 
+              :key="product.id" 
+              class="detail-item"
+            >
+              <img :src="product.image" class="detail-img" />
+              <div class="detail-info-right">
+                <div class="detail-name">{{ product.name }}</div>
+                <div class="detail-desc">{{ product.desc }}</div>
+                <div class="detail-info-row">
+                  <span>价格：</span><b>￥{{ product.price }}</b>
+                </div>
+                <div class="detail-info-row">
+                  <span>库存：</span><b>{{ product.stock }}</b>
+                </div>
+                <div class="detail-info-row">
+                  <span>销量：</span><b>{{ product.sales }}</b>
+                </div>
+                <el-button size="small" type="primary" @click="openEditDialog(product)">编辑商品</el-button>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-detail">请选择左侧商品查看详情</div>
+        </div>
       </el-card>
     </el-col>
 
@@ -214,7 +225,7 @@ const products = ref([
 ])
 
 const search = ref('')
-const selectedProduct = ref(null)
+const selectedProducts = ref([])
 
 const filteredProducts = computed(() => {
   if (!search.value) return products.value
@@ -226,11 +237,19 @@ const filteredProducts = computed(() => {
 })
 
 function handleSearch() {
-  selectedProduct.value = null
+  selectedProducts.value = []
 }
 
 function handleRowClick(row) {
-  selectedProduct.value = row
+  // 检查是否已经选中该商品
+  const existingIndex = selectedProducts.value.findIndex(p => p.id === row.id)
+  if (existingIndex === -1) {
+    // 如果未选中，则添加到选中列表
+    selectedProducts.value.push(row)
+  } else {
+    // 如果已选中，则从选中列表中移除
+    selectedProducts.value.splice(existingIndex, 1)
+  }
 }
 
 // 编辑商品
@@ -254,8 +273,12 @@ function saveEdit() {
   if (idx !== -1) {
     products.value[idx] = { ...editForm }
     // 如果当前详情是这个商品，也要同步
-    if (selectedProduct.value && selectedProduct.value.id === editForm.id) {
-      selectedProduct.value = products.value[idx]
+    if (selectedProducts.value.some(p => p.id === editForm.id)) {
+      const updatedProduct = products.value.find(p => p.id === editForm.id)
+      const index = selectedProducts.value.findIndex(p => p.id === editForm.id)
+      if (index !== -1) {
+        selectedProducts.value[index] = updatedProduct
+      }
     }
   }
   editDialogVisible.value = false
@@ -264,8 +287,8 @@ function saveEdit() {
 // 删除商品
 function deleteProduct(product) {
   products.value = products.value.filter(p => p.id !== product.id)
-  if (selectedProduct.value && selectedProduct.value.id === product.id) {
-    selectedProduct.value = null
+  if (selectedProducts.value.some(p => p.id === product.id)) {
+    selectedProducts.value = selectedProducts.value.filter(p => p.id !== product.id)
   }
 }
 
@@ -355,41 +378,90 @@ function handleImageChange(file) {
     font-weight: bold;
     font-size: 18px;
     margin-bottom: 12px;
-  }
-  .detail-content {
-    display: flex;
-    align-items: flex-start;
-    .detail-img {
-      width: 100px;
-      height: 100px;
-      border-radius: 8px;
-      object-fit: cover;
-      margin-right: 18px;
-      background: #f5f5f5;
+    .detail-tip {
+      font-size: 12px;
+      color: #999;
+      margin-left: 10px;
+      font-weight: normal;
     }
-    .detail-info-right {
-      flex: 1;
+  }
+  .detail-list-container {
+    height: 400px; /* 设置固定高度，约等于三个商品详情的高度 */
+    overflow-y: auto; /* 超出时显示滚动条 */
+    padding-right: 5px; /* 为滚动条留出空间 */
+    
+    /* 自定义滚动条样式 */
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
+    }
+    
+    .detail-list {
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      .detail-name {
-        font-size: 16px;
-        font-weight: bold;
-        margin-bottom: 6px;
-      }
-      .detail-desc {
-        color: #888;
-        margin-bottom: 10px;
-      }
-      .detail-info-row {
-        margin-bottom: 8px;
-        color: #333;
-        span {
-          color: #888;
+      gap: 12px; /* 商品之间的间距 */
+      .detail-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 12px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e9ecef;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background-color: #e9ecef;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-        b {
-          color: #222;
-          font-weight: bold;
+        
+        .detail-img {
+          width: 70px;
+          height: 70px;
+          border-radius: 8px;
+          object-fit: cover;
+          margin-right: 15px;
+          flex-shrink: 0;
+        }
+        .detail-info-right {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-start;
+          .detail-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 4px;
+            color: #333;
+          }
+          .detail-desc {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 8px;
+            line-height: 1.4;
+          }
+          .detail-info-row {
+            margin-bottom: 4px;
+            color: #333;
+            font-size: 12px;
+            span {
+              color: #666;
+            }
+            b {
+              color: #222;
+              font-weight: bold;
+            }
+          }
         }
       }
     }
